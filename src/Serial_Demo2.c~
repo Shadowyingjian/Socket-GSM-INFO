@@ -1,0 +1,94 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <asm/termios.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#define DEV_NAME  "/dev/ttyUSB4"
+ int fd;
+ //一个缓冲数组，用来存放每一次读到的数据
+char read_data[256]={0};
+//存放一个完整的数据帧，以便处理
+char read_buf[256]={0};
+//得到了一个完整的数据帧
+void get_complete_frame()
+{
+    char read_tmp[256]={0};
+    int return_flag=0;
+    int i;
+    //存放读取到的字节数
+    while(1)
+    {
+      memset(read_tmp,0,sizeof(read_tmp));
+      if(read(fd, read_tmp, sizeof(read_tmp))>0)
+      {
+        //数据帧的拼接
+        printf("read_tmp: %s\n",read_tmp);
+        for( i=0;i<strlen(read_tmp);i++)
+        {
+              if(read_tmp[i]=='$')
+              {
+                memset(read_data,0,sizeof(read_data));
+                char tmp[5]={0};
+                tmp[0]=read_tmp[i];
+                strcat(read_data,tmp);
+              }
+              else if(read_tmp[i]=='#')
+              {
+                char tmp[5]={0};
+                tmp[0]=read_tmp[i];
+                strcat(read_data,tmp);
+                return_flag=1;
+                memset(read_buf,0,sizeof(read_buf));
+                //遇到帧尾，将read_data帧拷贝到read_buf中，以便处理
+                memcpy(read_buf,read_data,sizeof(read_data));
+              }
+              else
+              {
+                  char tmp[5]={0};
+                tmp[0]=read_tmp[i];
+                strcat(read_data,tmp);
+              }
+        }
+        //有了一个完整的数据帧就返回处理
+        if(return_flag==1)
+            return;
+      }
+      else//读不到数据就返回，以便检查对方是否断线
+        return;
+    usleep(100000);
+    }
+}
+int main (int argc, char *argv[])
+{
+	
+	int len, i,ret;
+        char buf[] = "hello SHADOW";
+ 
+ 
+	fd = open(DEV_NAME, O_RDWR | O_NOCTTY);
+        if(fd < 0) {
+                perror(DEV_NAME);
+                return -1;
+        }
+ 
+ 
+	len = write(fd, buf, sizeof(buf));
+	if (len < 0) {
+		printf("write data error \n");
+	}
+	
+	len = read(fd, buf, sizeof(buf));
+        if (len < 0) {
+                printf("read error \n");
+                return -1;
+        }
+ 
+	printf("%s", buf);
+	get_complete_frame();
+ 
+	return(0);
+}
+

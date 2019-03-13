@@ -1,0 +1,129 @@
+#include     <stdio.h>
+#include     <stdlib.h> 
+#include     <unistd.h>  
+#include     <sys/types.h>
+#include     <sys/stat.h>
+#include     <fcntl.h> 
+#include     <termios.h>
+#include     <errno.h>
+
+//add tcp socket
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <sys/shm.h>
+
+#define MYPORT 7788
+#define BUFFER_SIZE 1024
+char* SERVER_IP = "120.27.155.49";
+
+    
+main()
+{
+    int fd;
+    int i;
+    int len;
+    int x_count = 0;
+    int n = 0;      
+    char read_buf[2048];
+    char write_buf[2048];
+    struct termios opt; 
+    
+    fd = open("/dev/ttyUSB0", O_RDWR|O_NOCTTY|O_NDELAY);
+    if(fd == -1)
+    {
+        perror("open serial 0\n");
+        exit(0);
+    }
+ 
+    tcgetattr(fd, &opt);      
+	bzero(&opt, sizeof(opt));
+    
+	tcflush(fd, TCIOFLUSH);
+ 
+	cfsetispeed(&opt, B9600);
+    cfsetospeed(&opt, B9600);
+    
+    opt.c_cflag &= ~CSIZE;  
+    opt.c_cflag |= CS8;   
+    opt.c_cflag &= ~CSTOPB; 
+    opt.c_cflag &= ~PARENB; 
+    opt.c_cflag &= ~CRTSCTS;
+    opt.c_cflag |= (CLOCAL | CREAD);
+ 
+    opt.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+ 
+    opt.c_oflag &= ~OPOST;
+    
+    //opt.c_cc[VTIME] = 0;
+    //opt.c_cc[VMIN] = 0;
+    
+    tcflush(fd, TCIOFLUSH);
+ 
+    printf("configure complete\n");
+	
+    if(tcsetattr(fd, TCSANOW, &opt) != 0)
+    {
+        perror("serial error");
+        return -1;
+    }
+ 
+    printf("start send and receive data\n");
+    //Define socket
+    int sock_cli = socket(AF_INET,SOCK_STREAM,0);
+    //Define sockaddr_in
+	struct sockaddr_in servaddr;
+	memset(&servaddr,0,sizeof(servaddr));
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_port = htons(MYPORT);
+	servaddr.sin_addr.s_addr = inet_addr(SERVER_IP);
+    
+    printf("connect %s:%d\n",SERVER_IP,MYPORT);
+    //CONNECT RESULT
+	if(connect(sock_cli,(struct sockaddr *)&servaddr,sizeof(servaddr))<0)
+	{
+      perror("connect");	
+      exit(1);
+	}
+    printf("connect server success!!\n");
+    char sendbuf[BUFFER_SIZE];
+    char recvbuf[BUFFER_SIZE];
+
+	while(1)
+    {    
+        n = 0;
+        len = 0;
+        bzero(read_buf, sizeof(read_buf)); 
+        bzero(write_buf, sizeof(write_buf));
+ 
+        while( (n = read(fd, read_buf, sizeof(read_buf))) > 0 )
+        {
+            for(i = len; i < (len + n); i++)
+            {
+                write_buf[i] = read_buf[i - len];
+            }
+            len += n;
+
+        }
+        write_buf[len] = '\0';
+              
+        printf("Len %d ", len);
+        printf("%s ", write_buf);
+ 
+        //n = write(fd, write_buf, len);
+        x_count = write(fd, "$$$$$$",strlen("$$$$$$"));
+        printf("write $ %d chars",x_count);
+        
+        memcpy(sendbuf,write_buf,len);
+        send(sock_cli,sendbuf,strlen(sendbuf),0);
+        //recv(sock_cli,recvbuf,sizeof(recvbuf),0);
+       // printf("receive from server: %s \n",recvbuf);
+        memset(sendbuf,0,sizeof(sendbuf));
+        //memset(recvbuf,0,sizeof(recvbuf));
+        sleep(2);
+    }
+    close(sock_cli);
+    
+	
+}
