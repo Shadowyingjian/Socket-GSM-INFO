@@ -1,4 +1,4 @@
-Socket-GSM-INFO:Socket-GSM-INFO.o
-	@$(CC) ./*.c -o Socket-GSM-INFO
+SIM-INFO:SIM-INFO.o
+	@$(CC) ./*.c -o SIM-INFO
 clean:
-	Socket-GSM-INFO*.o
+	SIM-INFO*.o

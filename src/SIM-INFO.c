@@ -14,8 +14,11 @@
     #define TRUE   0  
 
   int err_count = 0;
-  char *f_name = "gsm_info.txt";
-  char *m_name = "data.txt";
+  char *w_name = "WIFIDATA.txt";
+  char *s_name = "SIM.txt";
+  char *t_name = "TPressure.txt";
+  char *u_name = "UIM.txt";
+  char *d_name = "TEL.txt";
 
 /*
 +CMGRMI: Main_Info,4,1,1,0,3,22871,0,2
@@ -379,7 +382,7 @@ int Send_AT_Command(int fd,char *s_command,char * r_command,char *err_command,in
     else {
         printf("%d step send data failed!\n",step);
     }
-    sleep(2);
+    sleep(1);
   
    l_r_len = UART0_Recv(fd, l_rcv_buf,read_len);
    if(l_r_len > 0)
@@ -423,7 +426,7 @@ int Send_AT_Command(int fd,char *s_command,char * r_command,char *err_command,in
    else{
        printf("cannot receive data \n");
    }
-   sleep(2);
+   sleep(1);
   return step;
 }
 /*****************************************************
@@ -451,7 +454,7 @@ int Send_TCPDATA_Command(int fd,char *s_data,char *r_data,int read_len,int step)
     else {
         printf("%d step send data failed!\n",step);
     }
-    sleep(2);
+    sleep(1);
 
     l_s_len =  write(fd,send_end,sizeof(send_end));  
     if(l_s_len > 0)
@@ -461,7 +464,7 @@ int Send_TCPDATA_Command(int fd,char *s_data,char *r_data,int read_len,int step)
     else {
         printf("%d step send data failed!\n",step);
     }
-     sleep(2);  
+     sleep(1);  
 
      l_r_len = UART0_Recv(fd, l_rcv_buf,read_len);
      if(l_r_len > 0)
@@ -480,7 +483,7 @@ int Send_TCPDATA_Command(int fd,char *s_data,char *r_data,int read_len,int step)
      {
          printf("can not receive data\n");
      }
-     sleep(2);
+     sleep(1);
      return step;
 }
 
@@ -862,7 +865,7 @@ int M_Write(char *file_name,char* data)
     }
 	time(&now);
     timenow = localtime(&now);  
-	sprintf(a_data,"DATA:%s-Time:%s",data,asctime(timenow));  
+	sprintf(a_data,"SIM:%s-Time:%s",data,asctime(timenow));  
     printf("Local time is %s \n",asctime(timenow)); 
 
     if(write(fd,a_data,strlen(a_data))!=strlen(a_data))
@@ -891,7 +894,7 @@ int File_Write(char *file_name,char* data)
 	int fd;
 	time_t now;
 	struct tm *timenow;
-	char a_data[2048];
+	char a_data[4096];
 	if((fd=open(file_name,O_RDWR|O_APPEND|O_CREAT,S_IRWXU)) ==-1)
     {
        M_err("open",__LINE__);
@@ -902,7 +905,7 @@ int File_Write(char *file_name,char* data)
     }
 	time(&now);
     timenow = localtime(&now);  
-	sprintf(a_data,"DATA:%s-Time:%s",data,asctime(timenow));  
+	sprintf(a_data,"SIM:%s-Time:%s",data,asctime(timenow));  
     printf("Local time is %s \n",asctime(timenow)); 
 
     if(write(fd,a_data,strlen(a_data))!=strlen(a_data))
@@ -933,14 +936,19 @@ int main(int argc, char **argv)
       char gsm_info[1024];
       char gsm_ccid[1024];
       char gsm_name[1024];
-      char gsm_data[8096];
+      char gsm_data[10240];
 	  
 		//char Main_Info[1024];
 		//char Serving_Cell[1024];
 	  struct GSM_INFO g_info;
 	  struct Moni_INFO m_info;
       char a_data[2048];
-	  char file_data[4096];
+	  char b_data[2048];
+	  char sim_data[4096];
+      char uim_data[4096];
+	  char tel_data[4096];
+	  char wifi_data[4096];
+	  char tp_data[1024];
 	  float f_size = 0;
 
         //char send_buf[20]="tiger john";  
@@ -980,9 +988,14 @@ int main(int argc, char **argv)
                 {
                     //int Send_AT_Command(int fd,char *s_command,char * r_command,int read_len,int  step)
                     case 0: 
-							{ 
-							memset(file_data,0,sizeof(file_data));
+							{
+							memset(wifi_data,0,sizeof(wifi_data));
+							memset(tp_data,0,sizeof(tp_data));
+							memset(sim_data,0,sizeof(sim_data));
+							memset(uim_data,0,sizeof(uim_data)); 
+							memset(tel_data,0,sizeof(tel_data));
 							memset(a_data,0,sizeof(a_data));
+							memset(b_data,0,sizeof(b_data));
 							memset(gsm_name,0,sizeof(gsm_name));
 							memset(gsm_ccid,0,sizeof(gsm_ccid));
 							memset(gsm_info,0,sizeof(gsm_info));
@@ -1004,19 +1017,20 @@ int main(int argc, char **argv)
 								Find_Space(gsm_name,'\r','\n','-');
 								Get_M_Data(gsm_name,&m_info);
 								printf("%s %s %s %s %s %s %s %s %s %s \n",m_info.CC,m_info.NC,m_info.BSIC,m_info.RXQUAL,m_info.LAC,m_info.ID,m_info.ARFCN,m_info.PWR,m_info.C1,m_info.C2);			
-    							sprintf(a_data,"DATA:%s %s %s %s %s %s %s %s %s %s ",m_info.CC,m_info.NC,m_info.BSIC,m_info.RXQUAL,m_info.LAC,m_info.ID,m_info.ARFCN,m_info.PWR,m_info.C1,m_info.C2);      							
+    							sprintf(a_data,"%s %s %s %s %s %s %s %s %s %s ",m_info.CC,m_info.NC,m_info.BSIC,m_info.RXQUAL,m_info.LAC,m_info.ID,m_info.ARFCN,m_info.PWR,m_info.C1,m_info.C2);      							
 								printf("Get gsm-name: %s \n",gsm_name);
-								f_size = get_file_size(m_name);
+								f_size = get_file_size(s_name);
 								printf("file size %0.3f KB \n",f_size/1000);
-								if(f_size >=1000)
-								{
-									printf("file is too big need to restart\n");
-									M_Write(m_name,a_data);
-								}
-								else
-								{
-									File_Write(m_name,a_data);	
-								}
+								M_Write(s_name,a_data);
+								//if(f_size >=1000)
+								//{
+								//	printf("file is too big need to restart\n");
+								//	M_Write(m_name,a_data);
+								//}
+								//else
+								//{
+								//	File_Write(m_name,a_data);	
+								//}
 							 		break;
 							}
                     case 8: step = Send_AT_Command(fd,"AT+CNMP=38\r\n","OK","ERROR",step,err_count,99,8,test_data,0,0,0); break;
@@ -1031,10 +1045,15 @@ int main(int argc, char **argv)
 						   	step = Send_AT_Command(fd,"AT+CMGRMI=4\r\n","OK","ERROR",step,err_count,1023,10,gsm_info,0,1023,1);
 							Get_AllData(gsm_info,&g_info);
 							printf("Main_Info:%s -Serving_Cell:%s\n",g_info.Main_Info,g_info.Serving_Cell);
-							File_Read(m_name,file_data);
-							sprintf(gsm_data,"%s %s %s %s %s - %s",g_info.Main_Info,g_info.Serving_Cell,g_info.LTE_Intra,g_info.LTE_Intra_Cell1,g_info.LTE_Inter,file_data);
+							sprintf(b_data,"%s %s",g_info.Serving_Cell,a_data);
+							M_Write(s_name,b_data);
+							File_Read(s_name,sim_data);
+							File_Read(u_name,uim_data);
+							File_Read(d_name,tel_data);
+							File_Read(w_name,wifi_data);
+							File_Read(t_name,tp_data);
+							sprintf(gsm_data,"%s-%s-%s-%s-%s",sim_data,uim_data,tel_data,wifi_data,tp_data);
 							Find_Space(gsm_info,'\r','\n','*');
-							M_Write(f_name,gsm_data);
 							printf("Get gsm-info: %s\n %s \n",gsm_info,gsm_data);
 							break;
 							}
@@ -1049,8 +1068,13 @@ int main(int argc, char **argv)
 					
                     default:
 							{
-							memset(file_data,0,sizeof(file_data));
+							memset(wifi_data,0,sizeof(wifi_data));
+							memset(tp_data,0,sizeof(tp_data));
+							memset(sim_data,0,sizeof(sim_data));
+							memset(uim_data,0,sizeof(uim_data)); 
+							memset(tel_data,0,sizeof(tel_data));
 							memset(a_data,0,sizeof(a_data));
+							memset(b_data,0,sizeof(b_data));
 							memset(gsm_name,0,sizeof(gsm_name));
 							memset(gsm_ccid,0,sizeof(gsm_ccid));
 							memset(gsm_info,0,sizeof(gsm_info));
